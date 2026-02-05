@@ -31,6 +31,9 @@ env:
   ARMBIAN_VERSION: v22.08.2
   BOARD_NAME: q9s-rk3128
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-22.04
@@ -38,7 +41,7 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       
       - name: Free up disk space
         run: |
@@ -207,7 +210,7 @@ jobs:
           ls -lah artifacts/
       
       - name: Upload image artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: armbian-q9s-rk3128-image
           path: artifacts/*.img*
@@ -215,7 +218,7 @@ jobs:
           if-no-files-found: warn
       
       - name: Upload build info
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build-info
           path: |
@@ -224,7 +227,7 @@ jobs:
           retention-days: 30
       
       - name: Upload build log
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: build-log
@@ -233,7 +236,7 @@ jobs:
       
       - name: Create GitHub Release
         if: success() && github.event_name == 'workflow_dispatch'
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
           name: "Armbian Q9S RK3128 - Build #${{ github.run_number }}"
