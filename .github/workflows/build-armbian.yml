@@ -22,6 +22,7 @@ on:
   push:
     branches:
       - main
+      - master
     paths:
       - '.github/workflows/build-armbian.yml'
       - 'userpatches/**'
@@ -36,7 +37,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     timeout-minutes: 360
     
     steps:
@@ -62,7 +63,7 @@ jobs:
           echo "=== Disk space after cleanup ==="
           df -h
       
-      - name: Install build dependencies
+      - name: Install Docker and dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -71,7 +72,6 @@ jobs:
             wget \
             p7zip-full \
             qemu-user-static \
-            debootstrap \
             binfmt-support
       
       - name: Clone Armbian build system
@@ -163,12 +163,12 @@ jobs:
           CONFIG_MALI400=y
           KERNEL_EOF
       
-      - name: Build Armbian image
+      - name: Build Armbian image using Docker
         run: |
           cd armbian-build
           
-          # Run build with our configuration
-          ./compile.sh \
+          # Run build with Docker (this uses Ubuntu 20.04/18.04 container inside)
+          ./compile.sh docker \
             BOARD=${{ env.BOARD_NAME }} \
             BRANCH=legacy \
             RELEASE=${{ github.event.inputs.release || 'bullseye' }} \
@@ -178,7 +178,6 @@ jobs:
             KERNEL_CONFIGURE=${{ github.event.inputs.kernel_configure || 'no' }} \
             COMPRESS_OUTPUTIMAGE=sha,xz \
             EXPERT=yes \
-            SKIP_EXTERNAL_TOOLCHAINS=yes \
             2>&1 | tee ../build.log
           
           echo "=== Build completed ==="
