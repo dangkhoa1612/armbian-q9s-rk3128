@@ -28,7 +28,7 @@ on:
       - 'config/**'
 
 env:
-  ARMBIAN_VERSION: v22.08.2
+  ARMBIAN_VERSION: v2021.05
   BOARD_NAME: q9s-rk3128
 
 permissions:
