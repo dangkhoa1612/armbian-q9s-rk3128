@@ -6,19 +6,13 @@ on:
       release:
         description: 'Debian/Ubuntu release'
         required: true
-        default: 'bullseye'
+        default: 'bookworm'
         type: choice
         options:
+          - bookworm
           - bullseye
-          - buster
-      kernel_configure:
-        description: 'Interactive kernel config'
-        required: false
-        default: 'no'
-        type: choice
-        options:
-          - 'no'
-          - 'yes'
+          - jammy
+          - noble
   push:
     branches:
       - main
@@ -29,7 +23,6 @@ on:
       - 'config/**'
 
 env:
-  ARMBIAN_VERSION: main
   BOARD_NAME: q9s-rk3128
 
 permissions:
@@ -84,9 +77,6 @@ jobs:
       
       - name: Setup custom board configuration
         run: |
-          # Copy userpatches
-          cp -rv userpatches/* armbian-build/userpatches/ 2>/dev/null || true
-          
           # Create boards directory if needed
           mkdir -p armbian-build/config/boards
           
@@ -95,87 +85,21 @@ jobs:
             cp -v config/boards/q9s-rk3128.wip armbian-build/config/boards/
           fi
           
-          # List what we have
-          echo "=== Userpatches ==="
-          ls -la armbian-build/userpatches/ || echo "No userpatches"
-          
           echo "=== Custom board configs ==="
-          ls -la armbian-build/config/boards/q9s* 2>/dev/null || echo "No custom board"
-      
-      - name: Create RK3128 board definition
-        run: |
-          # Create board definition for Q9S RK3128
-          cat > armbian-build/config/boards/q9s-rk3128.wip << 'BOARD_EOF'
-          # Q9S Android TV Box with RK3128
-          # Board: TXCZ-RK3128-V3.1
-          
-          BOARD_NAME="Q9S RK3128"
-          BOARDFAMILY="rockchip"
-          BOARD_MAINTAINER=""
-          BOOTCONFIG="evb-rk3128_defconfig"
-          KERNEL_TARGET="legacy"
-          FULL_DESKTOP="no"
-          BOOT_LOGO="yes"
-          BOOTSIZE="512"
-          BOOTFS_TYPE="fat"
-          
-          # RK3128 specific
-          LINUXFAMILY="rockchip"
-          ARCH="arm"
-          
-          # DDR and loader
-          DDR_BLOB='rk3128_ddr_300MHz_v2.12.bin'
-          MINILOADER_BLOB='rk312x_miniloader_v2.57.bin'
-          BL31_BLOB=''
-          BOARD_EOF
-          
           cat armbian-build/config/boards/q9s-rk3128.wip
-      
-      - name: Prepare kernel patches for RK3128
-        run: |
-          mkdir -p armbian-build/userpatches/kernel/rockchip-legacy
-          
-          # Kernel config fragment for RK3128
-          cat > armbian-build/userpatches/kernel/rockchip-legacy/config-q9s.conf << 'KERNEL_EOF'
-          # Q9S RK3128 kernel config additions
-          CONFIG_SMP=y
-          CONFIG_NR_CPUS=4
-          CONFIG_LOCALVERSION="-q9s-rk3128"
-          
-          # USB support
-          CONFIG_USB_EHCI_HCD=y
-          CONFIG_USB_OHCI_HCD=y
-          CONFIG_USB_DWC2=y
-          
-          # Ethernet
-          CONFIG_STMMAC_ETH=y
-          
-          # WiFi (if present)
-          CONFIG_RTL8188EU=m
-          CONFIG_RTL8192CU=m
-          CONFIG_RTL8723BS=m
-          
-          # IR remote
-          CONFIG_IR_CORE=m
-          CONFIG_RC_CORE=m
-          
-          # Mali GPU
-          CONFIG_MALI400=y
-          KERNEL_EOF
       
       - name: Build Armbian image
         run: |
           cd armbian-build
           
-          # Run build directly (new Armbian supports Ubuntu 22.04)
-          ./compile.sh \
+          # Run build using new Armbian CLI syntax
+          ./compile.sh build \
             BOARD=${{ env.BOARD_NAME }} \
             BRANCH=current \
-            RELEASE=${{ github.event.inputs.release || 'bullseye' }} \
+            RELEASE=${{ github.event.inputs.release || 'bookworm' }} \
             BUILD_MINIMAL=yes \
             BUILD_DESKTOP=no \
-            KERNEL_ONLY=no \
-            KERNEL_CONFIGURE=${{ github.event.inputs.kernel_configure || 'no' }} \
+            KERNEL_CONFIGURE=no \
             COMPRESS_OUTPUTIMAGE=sha,xz \
             EXPERT=yes \
             2>&1 | tee ../build.log
@@ -198,10 +122,10 @@ jobs:
           # Create info file
           cat > artifacts/BUILD_INFO.txt << EOF
           Build Date: $(date -u '+%Y-%m-%d %H:%M:%S UTC')
-          Armbian Version: ${{ env.ARMBIAN_VERSION }}
+          Armbian Version: main
           Board: Q9S RK3128 (TXCZ-RK3128-V3.1)
-          Release: ${{ github.event.inputs.release || 'bullseye' }}
-          Kernel: 4.4.x (legacy)
+          Release: ${{ github.event.inputs.release || 'bookworm' }}
+          Kernel: 6.x (current)
           GitHub Run: ${{ github.run_id }}
           EOF
           
@@ -251,14 +175,14 @@ jobs:
             | Item | Value |
             |------|-------|
             | **Board** | Q9S (TXCZ-RK3128-V3.1) |
-            | **Release** | ${{ github.event.inputs.release || 'bullseye' }} |
-            | **Kernel** | Linux 4.4.x (legacy) |
-            | **Armbian** | ${{ env.ARMBIAN_VERSION }} |
+            | **Release** | ${{ github.event.inputs.release || 'bookworm' }} |
+            | **Kernel** | Linux 6.x (current) |
+            | **Armbian** | main branch |
             
             ### Hướng dẫn
             1. Download file `.img.xz`
             2. Giải nén bằng 7-zip hoặc `xz -d`
-            3. Flash bằng RKDevTool (Windows) hoặc rkdeveloptool (Linux)
+            3. Flash bằng Balena Etcher hoặc dd
             
             ### ⚠️ Lưu ý
             - Backup firmware gốc trước khi flash!
@@ -274,8 +198,8 @@ jobs:
           echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| Board | Q9S RK3128 |" >> $GITHUB_STEP_SUMMARY
-          echo "| Armbian | ${{ env.ARMBIAN_VERSION }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Release | ${{ github.event.inputs.release || 'bullseye' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Armbian | main branch |" >> $GITHUB_STEP_SUMMARY
+          echo "| Release | ${{ github.event.inputs.release || 'bookworm' }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
           if [ -f artifacts/*.img.xz ]; then

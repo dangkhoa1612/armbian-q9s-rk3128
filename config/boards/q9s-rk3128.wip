@@ -2,7 +2,7 @@
 # Board: TXCZ-RK3128-V3.1
 # 
 # This is a WIP (Work In Progress) board definition
-# The board may not be fully supported by Armbian mainline
+# Based on generic rockchip configuration
 
 BOARD_NAME="Q9S RK3128"
 BOARDFAMILY="rockchip"
@@ -11,8 +11,8 @@ BOARD_MAINTAINER=""
 # U-Boot configuration
 BOOTCONFIG="evb-rk3128_defconfig"
 
-# Kernel target - use legacy for 4.4.x kernel
-KERNEL_TARGET="legacy"
+# Kernel target - use 'current' for modern kernel support
+KERNEL_TARGET="current"
 
 # No desktop for server/headless
 FULL_DESKTOP="no"
@@ -26,21 +26,5 @@ BOOTFS_TYPE="fat"
 LINUXFAMILY="rockchip"
 ARCH="arm"
 
-# RK3128 specific blobs
-# These are required for DDR initialization and boot
-DDR_BLOB='rk3128_ddr_300MHz_v2.12.bin'
-MINILOADER_BLOB='rk312x_miniloader_v2.57.bin'
-
-# No ATF/BL31 for RK3128 (32-bit CPU)
-BL31_BLOB=''
-
 # Hardware features
-# Adjust based on your specific Q9S variant
 HAS_VIDEO_OUTPUT="yes"
-
-# HDMI audio
-# MODULES_BLACKLIST=""
-# MODULES_CURRENT=""
-
-# Default kernel command line additions
-# BOOT_FDT_FILE=""
