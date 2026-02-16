@@ -170,6 +170,10 @@ jobs:
 
           # Disable rtl8822bs to avoid missing repo
           CONFIG_RTL8822BS=n
+
+      - name: Remove nala from rootfs packages
+        run: |
+          sed -i '/nala/d' armbian-build/config/cli/_all_distributions/main
           
       - name: Build Armbian image
         run: |
@@ -293,6 +297,7 @@ jobs:
           else
             echo "❌ Build may have failed - check logs" >> $GITHUB_STEP_SUMMARY
           fi
+
 
 
 
