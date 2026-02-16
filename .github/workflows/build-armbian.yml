@@ -28,7 +28,7 @@ on:
       - 'config/**'
 
 env:
-  ARMBIAN_VERSION: main
+  ARMBIAN_VERSION: v22.08
   BOARD_NAME: q9s-rk3128
 
 jobs:
@@ -281,3 +281,4 @@ jobs:
           else
             echo "❌ Build may have failed - check logs" >> $GITHUB_STEP_SUMMARY
           fi
+
