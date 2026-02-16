@@ -96,8 +96,8 @@ jobs:
           mkdir -p armbian-build/config/boards
           
           # Copy board config
-          if [ -f config/boards/q9s-rk3128.wip ]; then
-            cp -v config/boards/q9s-rk3128.wip armbian-build/config/boards/
+          if [ -f config/boards/q9s-rk3128.conf ]; then
+            cp -v config/boards/q9s-rk3128.conf armbian-build/config/boards/
           fi
           
           # List what we have
@@ -110,7 +110,7 @@ jobs:
       - name: Create RK3128 board definition
         run: |
           # Create board definition for Q9S RK3128
-          cat > armbian-build/config/boards/q9s-rk3128.wip << 'BOARD_EOF'
+          cat > armbian-build/config/boards/q9s-rk3128.conf << 'BOARD_EOF'
           # Q9S Android TV Box with RK3128
           # Board: TXCZ-RK3128-V3.1
           
@@ -134,7 +134,7 @@ jobs:
           BL31_BLOB=''
           BOARD_EOF
           
-          cat armbian-build/config/boards/q9s-rk3128.wip
+          cat armbian-build/config/boards/q9s-rk3128.conf
       
       - name: Prepare kernel patches for RK3128
         run: |
@@ -294,6 +294,7 @@ jobs:
           else
             echo "❌ Build may have failed - check logs" >> $GITHUB_STEP_SUMMARY
           fi
+
 
 
 
