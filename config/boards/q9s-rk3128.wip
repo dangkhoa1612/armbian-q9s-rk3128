@@ -13,7 +13,6 @@ BOOTCONFIG="evb-rk3128_defconfig"
 
 # Kernel target - use legacy for 4.4.x kernel
 KERNEL_TARGET="legacy"
-KERNEL_MAJOR_MINOR="4.4"
 
 # No desktop for server/headless
 FULL_DESKTOP="no"
@@ -45,4 +44,5 @@ HAS_VIDEO_OUTPUT="yes"
 
 # Default kernel command line additions
 # BOOT_FDT_FILE=""
+
 
