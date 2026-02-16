@@ -159,7 +159,10 @@ jobs:
           # Mali GPU
           CONFIG_MALI400=y
           KERNEL_EOF
-      
+
+          # Disable rtl8822bs to avoid missing repo
+          CONFIG_RTL8822BS=n
+          
       - name: Build Armbian image
         run: |
           cd armbian-build
@@ -280,5 +283,6 @@ jobs:
           else
             echo "❌ Build may have failed - check logs" >> $GITHUB_STEP_SUMMARY
           fi
+
 
 
