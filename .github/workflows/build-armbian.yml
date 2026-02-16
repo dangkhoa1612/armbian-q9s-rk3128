@@ -28,7 +28,7 @@ on:
       - 'config/**'
 
 env:
-  ARMBIAN_VERSION: v22.08
+  ARMBIAN_VERSION: main
   BOARD_NAME: q9s-rk3128
 
 jobs:
@@ -170,10 +170,6 @@ jobs:
 
           # Disable rtl8822bs to avoid missing repo
           CONFIG_RTL8822BS=n
-
-      - name: Remove nala from rootfs packages
-        run: |
-          sed -i '/nala/d' armbian-build/config/cli/_all_distributions/main
           
       - name: Build Armbian image
         run: |
@@ -184,7 +180,8 @@ jobs:
             BOARD=${{ env.BOARD_NAME }} \
             BRANCH=legacy \
             RELEASE=${{ github.event.inputs.release || 'bullseye' }} \
-            BUILD_MINIMAL=no \
+            BUILD_MINIMAL=yes \
+            CLI_MINIMAL=yes \
             BUILD_DESKTOP=no \
             KERNEL_ONLY=no \
             EXTRAWIFI=no \
@@ -297,6 +294,7 @@ jobs:
           else
             echo "❌ Build may have failed - check logs" >> $GITHUB_STEP_SUMMARY
           fi
+
 
 
 
