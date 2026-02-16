@@ -28,7 +28,7 @@ on:
       - 'config/**'
 
 env:
-  ARMBIAN_VERSION: v22.08
+  ARMBIAN_VERSION: v22.05
   BOARD_NAME: q9s-rk3128
 
 jobs:
@@ -175,7 +175,6 @@ jobs:
             KERNEL_CONFIGURE=${{ github.event.inputs.kernel_configure || 'no' }} \
             COMPRESS_OUTPUTIMAGE=sha,xz \
             EXPERT=yes \
-            SKIP_EXTERNAL_TOOLCHAINS=yes \
             2>&1 | tee ../build.log
           
           echo "=== Build completed ==="
@@ -281,4 +280,5 @@ jobs:
           else
             echo "❌ Build may have failed - check logs" >> $GITHUB_STEP_SUMMARY
           fi
+
 
