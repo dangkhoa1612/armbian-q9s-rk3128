@@ -28,7 +28,7 @@ on:
       - 'config/**'
 
 env:
-  ARMBIAN_VERSION: v22.05
+  ARMBIAN_VERSION: v22.08
   BOARD_NAME: q9s-rk3128
 
 jobs:
@@ -78,6 +78,14 @@ jobs:
           
           echo "Armbian version: ${{ env.ARMBIAN_VERSION }}"
           cd armbian-build && git log -1 --oneline
+
+      - name: Remove rtl8822bs broken driver
+        run: |
+          sed -i '/rtl8822bs/d' \
+          armbian-build/sources/linux-mainline*/drivers/net/wireless/Kconfig 2>/dev/null || true
+          
+          sed -i '/rtl8822bs/d' \
+          armbian-build/sources/linux-*/drivers/net/wireless/Kconfig 2>/dev/null || true
       
       - name: Setup custom board configuration
         run: |
@@ -283,6 +291,7 @@ jobs:
           else
             echo "❌ Build may have failed - check logs" >> $GITHUB_STEP_SUMMARY
           fi
+
 
 
 
