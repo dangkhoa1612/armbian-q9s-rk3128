@@ -159,6 +159,11 @@ jobs:
           # Mali GPU
           CONFIG_MALI400=y
           KERNEL_EOF
+
+      - name: Fix legacy kernel config (disable rtl8822bs)
+        run: |
+          sed -i '/rtl8822bs/d' \
+          armbian-build/config/kernel/linux-rockchip-legacy.config || true
       
       - name: Build Armbian image
         run: |
@@ -281,6 +286,7 @@ jobs:
           else
             echo "❌ Build may have failed - check logs" >> $GITHUB_STEP_SUMMARY
           fi
+
 
 
 
