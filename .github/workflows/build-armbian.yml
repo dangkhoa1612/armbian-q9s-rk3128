@@ -1,209 +1,137 @@
-name: Build Armbian for Q9S RK3128
+name: Build Armbian Q9S RK3128 (Stable)
 
 on:
   workflow_dispatch:
     inputs:
       release:
-        description: 'Debian/Ubuntu release'
+        description: "Debian release"
         required: true
-        default: 'bookworm'
+        default: "bullseye"
         type: choice
         options:
-          - bookworm
           - bullseye
-          - jammy
-          - noble
-  push:
-    branches:
-      - main
-      - master
-    paths:
-      - '.github/workflows/build-armbian.yml'
-      - 'userpatches/**'
-      - 'config/**'
+          - buster
 
 env:
-  BOARD_NAME: q9s-rk3128
-
-permissions:
-  contents: write
+  ARMBIAN_VERSION: v23.11.1
+  BOARD: q9s-rk3128
 
 jobs:
   build:
     runs-on: ubuntu-22.04
     timeout-minutes: 360
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      
-      - name: Free up disk space
+
+      # =============================
+      # Free disk space
+      # =============================
+      - name: Free disk space
         run: |
-          echo "=== Disk space before cleanup ==="
-          df -h
-          
-          # Remove unnecessary packages
           sudo rm -rf /usr/share/dotnet
           sudo rm -rf /opt/ghc
-          sudo rm -rf "/usr/local/share/boost"
-          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
           sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /usr/share/swift
-          
-          # Clean apt cache
           sudo apt-get clean
-          
-          echo "=== Disk space after cleanup ==="
           df -h
-      
-      - name: Install Docker and dependencies
+
+      # =============================
+      # Install dependencies
+      # =============================
+      - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            git \
-            curl \
-            wget \
-            p7zip-full \
-            qemu-user-static \
+            git curl wget p7zip-full \
+            qemu-user-static debootstrap \
             binfmt-support
-      
-      - name: Clone Armbian build system
+
+      # =============================
+      # Clone Armbian stable
+      # =============================
+      - name: Clone Armbian Build System
         run: |
           git clone --depth=1 \
+            --branch=${{ env.ARMBIAN_VERSION }} \
             https://github.com/armbian/build.git armbian-build
-          
-          echo "Using Armbian main branch"
-          cd armbian-build && git log -1 --oneline
-      
-      - name: Setup custom board configuration
+          cd armbian-build
+          git log -1 --oneline
+
+      # =============================
+      # Copy custom board config
+      # =============================
+      - name: Setup board config
         run: |
-          # Create boards directory if needed
           mkdir -p armbian-build/config/boards
-          
-          # Copy board config
-          if [ -f config/boards/q9s-rk3128.wip ]; then
-            cp -v config/boards/q9s-rk3128.wip armbian-build/config/boards/
-          fi
-          
-          echo "=== Custom board configs ==="
-          cat armbian-build/config/boards/q9s-rk3128.wip
-      
-      - name: Build Armbian image
+
+          cat > armbian-build/config/boards/q9s-rk3128.conf << 'EOF'
+          BOARD_NAME="Q9S RK3128"
+          BOARDFAMILY="rockchip"
+          LINUXFAMILY="rockchip"
+          ARCH="arm"
+          KERNEL_TARGET="legacy"
+          BOOTCONFIG="evb-rk3128_defconfig"
+          EOF
+
+      # =============================
+      # Kernel config fragment
+      # =============================
+      - name: Add kernel config fragment
+        run: |
+          mkdir -p armbian-build/userpatches/kernel/rockchip-legacy
+
+          cat > armbian-build/userpatches/kernel/rockchip-legacy/config-q9s.conf << 'EOF'
+          CONFIG_LOCALVERSION="-q9s-rk3128"
+          CONFIG_SMP=y
+          CONFIG_NR_CPUS=4
+          CONFIG_USB_EHCI_HCD=y
+          CONFIG_USB_OHCI_HCD=y
+          CONFIG_STMMAC_ETH=y
+          EOF
+
+      # =============================
+      # Build Armbian
+      # =============================
+      - name: Build image
         run: |
           cd armbian-build
-          
-          # Run build using new Armbian CLI syntax
-          ./compile.sh build \
-            BOARD=${{ env.BOARD_NAME }} \
-            BRANCH=current \
-            RELEASE=${{ github.event.inputs.release || 'bookworm' }} \
+
+          ./compile.sh \
+            BOARD=${{ env.BOARD }} \
+            BRANCH=legacy \
+            RELEASE=${{ github.event.inputs.release }} \
             BUILD_MINIMAL=yes \
             BUILD_DESKTOP=no \
             KERNEL_CONFIGURE=no \
+            EXTRAWIFI=no \
+            SHARE_LOG=yes \
             COMPRESS_OUTPUTIMAGE=sha,xz \
-            EXPERT=yes \
-            2>&1 | tee ../build.log
-          
-          echo "=== Build completed ==="
-          ls -lah output/images/ || echo "No images found"
-      
-      - name: Prepare artifacts
+            EXPERT=yes
+
+      # =============================
+      # Collect artifacts
+      # =============================
+      - name: Collect artifacts
         if: always()
         run: |
           mkdir -p artifacts
-          
-          # Copy images
-          cp -v armbian-build/output/images/*.img* artifacts/ 2>/dev/null || true
-          cp -v armbian-build/output/images/*.txt artifacts/ 2>/dev/null || true
-          
-          # Copy build log
-          cp -v build.log artifacts/ 2>/dev/null || true
-          
-          # Create info file
-          cat > artifacts/BUILD_INFO.txt << EOF
-          Build Date: $(date -u '+%Y-%m-%d %H:%M:%S UTC')
-          Armbian Version: main
-          Board: Q9S RK3128 (TXCZ-RK3128-V3.1)
-          Release: ${{ github.event.inputs.release || 'bookworm' }}
-          Kernel: 6.x (current)
-          GitHub Run: ${{ github.run_id }}
-          EOF
-          
-          echo "=== Artifacts ==="
-          ls -lah artifacts/
-      
-      - name: Upload image artifacts
+          cp -v armbian-build/output/images/*.img.xz artifacts/ 2>/dev/null || true
+          cp -v armbian-build/output/images/*.sha artifacts/ 2>/dev/null || true
+
+      # =============================
+      # Upload artifacts
+      # =============================
+      - name: Upload image
         uses: actions/upload-artifact@v4
         with:
-          name: armbian-q9s-rk3128-image
-          path: artifacts/*.img*
-          retention-days: 30
+          name: armbian-q9s-rk3128
+          path: artifacts/*.img.xz
           if-no-files-found: warn
-      
-      - name: Upload build info
+
+      - name: Upload checksum
         uses: actions/upload-artifact@v4
         with:
-          name: build-info
-          path: |
-            artifacts/BUILD_INFO.txt
-            artifacts/*.txt
-          retention-days: 30
-      
-      - name: Upload build log
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: build-log
-          path: build.log
-          retention-days: 7
-      
-      - name: Create GitHub Release
-        if: success() && github.event_name == 'workflow_dispatch'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: build-${{ github.run_number }}
-          name: "Armbian Q9S RK3128 - Build #${{ github.run_number }}"
-          draft: false
-          prerelease: false
-          files: |
-            artifacts/*.img.xz
-            artifacts/BUILD_INFO.txt
-          body: |
-            ## 🎉 Armbian Build for Q9S RK3128
-            
-            ### Thông tin build
-            | Item | Value |
-            |------|-------|
-            | **Board** | Q9S (TXCZ-RK3128-V3.1) |
-            | **Release** | ${{ github.event.inputs.release || 'bookworm' }} |
-            | **Kernel** | Linux 6.x (current) |
-            | **Armbian** | main branch |
-            
-            ### Hướng dẫn
-            1. Download file `.img.xz`
-            2. Giải nén bằng 7-zip hoặc `xz -d`
-            3. Flash bằng Balena Etcher hoặc dd
-            
-            ### ⚠️ Lưu ý
-            - Backup firmware gốc trước khi flash!
-            - Kiểm tra SHA256 checksum sau khi download
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Build summary
-        if: always()
-        run: |
-          echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Board | Q9S RK3128 |" >> $GITHUB_STEP_SUMMARY
-          echo "| Armbian | main branch |" >> $GITHUB_STEP_SUMMARY
-          echo "| Release | ${{ github.event.inputs.release || 'bookworm' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          if [ -f artifacts/*.img.xz ]; then
-            echo "✅ Build succeeded!" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "❌ Build may have failed - check logs" >> $GITHUB_STEP_SUMMARY
-          fi
+          name: checksum
+          path: artifacts/*.sha
+          if-no-files-found: warn
