@@ -13,7 +13,7 @@ on:
           - buster
 
 env:
-  ARMBIAN_VERSION: v22.11.4
+  ARMBIAN_VERSION: v22.11
   BOARD: q9s-rk3128
 
 jobs:
