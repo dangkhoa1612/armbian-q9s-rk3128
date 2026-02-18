@@ -103,6 +103,7 @@ jobs:
             RELEASE=${{ github.event.inputs.release }} \
             DOWNLOAD_TOOL=wget \
             NO_APT_CACHER=yes \
+            ARMBIAN_MIRROR=github \
             BUILD_MINIMAL=yes \
             BUILD_DESKTOP=no \
             KERNEL_CONFIGURE=no \
