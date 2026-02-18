@@ -13,7 +13,7 @@ on:
           - buster
 
 env:
-  ARMBIAN_VERSION: v23.11.1
+  ARMBIAN_VERSION: v22.11.4
   BOARD: q9s-rk3128
 
 jobs:
@@ -135,3 +135,4 @@ jobs:
           name: checksum
           path: artifacts/*.sha
           if-no-files-found: warn
+
